@@ -11,16 +11,19 @@ const saveTpModel = async(params, userId) => {
         const paramsForTTT = [techId, traineeId, trainerId, userId];
         const selectQuery = `SELECT * FROM trainee_trainer_tech WHERE tech_id = ? AND trainee_id = ? AND trainer_id = ?`
         const results = await executeQuery(selectQuery, [techId, traineeId, trainerId]);
+        let tttId;
         if (results.length > 0) {
-            return {isDuplicate: true, success: false, message: "Data CANNOT be inserted successfully into both tables."};
+            tttId = results[0].ttt_id;
+            // return {isDuplicate: true, success: false, message: "Data CANNOT be inserted successfully into both tables."};
+        } else {
+            const insertQueryTTT = `INSERT INTO trainee_trainer_tech (tech_id, trainee_id, trainer_id, created_by) VALUES (?, ?, ?, ?)`;
+            const traineeTrainerTechResults = await executeQuery(insertQueryTTT, paramsForTTT);
+            if (traineeTrainerTechResults.error) {
+                await rollbackTransaction(traineeTrainerTechResults.error);
+                throw traineeTrainerTechResults.error;
+            }
+            tttId = traineeTrainerTechResults.insertId
         }
-        const insertQueryTTT = `INSERT INTO trainee_trainer_tech (tech_id, trainee_id, trainer_id, created_by) VALUES (?, ?, ?, ?)`;
-        const traineeTrainerTechResults = await executeQuery(insertQueryTTT, paramsForTTT);
-        if (traineeTrainerTechResults.error) {
-            await rollbackTransaction(traineeTrainerTechResults.error);
-            throw traineeTrainerTechResults.error;
-        }
-        const tttId = traineeTrainerTechResults.insertId
         const values = paramsForTP.map(param => [tttId, param.activity_id, param.due_date, param.required ? param.required : true, 1, userId]);
         const insertQuery = `INSERT INTO training_plan(ttt_id , activity_id, due_date, required, status_id, created_by) VALUES ?`;
         const trainingPlanResult = await executeQuery(insertQuery, [values]);

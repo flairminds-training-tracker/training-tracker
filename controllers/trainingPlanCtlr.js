@@ -15,6 +15,9 @@ const saveTpCtrl = async(req, res) => {
         return sendFailRes(res, { message: results.error.errorMessage})
         // return res.send({error: true, errorMessage: results.error.errorMessage})
     } catch (error) {
+        if (error.code == 'ER_DUP_ENTRY') {
+            return sendFailRes(res, { message: "Duplicate activity" }, 409);
+        }
         console.error("Exception in save training plan controller", error);
         return sendFailRes(res, { message: "Internal Server Error" }, 500);
     }
